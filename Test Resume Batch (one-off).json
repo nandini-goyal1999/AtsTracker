@@ -1,0 +1,217 @@
+{
+  "name": "Test Resume Batch (one-off)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "68133a2f-98e6-4c10-94bb-f24595d50709",
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 15 fictional resumes for the Data Science Analyst role, mixed order.\nconst people = [\n  { n: 'Priya Raman', lines: ['Data Analyst, Northwind Retail (3 years)', '- Wrote complex SQL (CTEs, window functions) on Snowflake for weekly sales reporting', '- Built 12 Power BI dashboards used by 40+ managers', '- Python (pandas, scikit-learn): churn model with logistic regression, AUC 0.81', '- Presented A/B test results to non-technical leadership', 'Education: B.Sc. Statistics, University of Toronto', 'Skills: SQL, Python, pandas, Power BI, Tableau, statistics, hypothesis testing, AWS basics, Zapier']},\n  { n: 'Marcus Lee', lines: ['Retail Sales Associate, BestMart (4 years)', '- Helped customers choose electronics', '- Counted inventory and restocked shelves', '- Used Excel to track my weekly hours', 'Education: High school diploma', 'Skills: customer service, teamwork, cash handling']},\n  { n: 'Elena Petrova', lines: ['Junior Data Analyst, CityBank (1 year)', '- Wrote basic SQL SELECT queries for monthly reports', '- Updated existing Tableau dashboards', '- Some Python for cleaning CSV files', 'Education: B.A. Economics, UBC', 'Skills: SQL (basic), Excel, Tableau, Python (beginner), communication']},\n  { n: 'David Okafor', lines: ['Business Intelligence Analyst, Helix Health (4 years)', '- Designed SQL data models in PostgreSQL and BigQuery; optimized queries 5x faster', '- Built Tableau and Power BI executive dashboards', '- Python pandas pipelines automated reporting, saving 10 hours per week', '- Random forest model forecasting patient no-shows (precision 0.78)', '- Explained findings to clinicians and executives in plain language', 'Education: B.Sc. Mathematics, McGill University', 'Skills: SQL, Python, pandas, scikit-learn, statistics, Tableau, Power BI, GCP, Airflow']},\n  { n: 'Sofia Martinez', lines: ['Marketing Coordinator, BrightAds (2 years)', '- Pulled campaign numbers from Google Analytics into Excel', '- Made pivot tables and charts for monthly reports', '- Took an online intro SQL course', 'Education: B.Comm. Marketing, SFU', 'Skills: Excel, Google Analytics, SQL (course), presentations']},\n  { n: 'Kevin Brooks', lines: ['Barista, Coffee Corner (2 years)', '- Prepared drinks and handled payments', '- Trained new staff', 'Education: Some college, General Studies', 'Skills: customer service, Microsoft Word, social media']},\n  { n: 'Aisha Khan', lines: ['Data Scientist (Analytics), FinEdge (3 years)', '- Advanced SQL on Redshift; built dbt models for finance metrics', '- Python: pandas, statsmodels, XGBoost for credit-risk scoring', '- Power BI dashboards for risk and operations teams', '- Ran experiments and power analysis for product launches', '- Weekly stakeholder presentations; mentored 2 junior analysts', 'Education: M.Sc. Data Science, University of Waterloo; B.Sc. Computer Science', 'Skills: SQL, Python, statistics, ML, Power BI, AWS, Git, automation with Python and n8n']},\n  { n: 'Tom Nguyen', lines: ['Operations Analyst, ShipFast Logistics (2 years)', '- SQL queries in MySQL to track delivery times', '- Built Excel and some Power BI reports', '- Learning Python through online courses', 'Education: B.Sc. Business Analytics, York University', 'Skills: SQL, Excel, Power BI (basic), Python (learning), process improvement']},\n  { n: 'Rachel Green', lines: ['Event Planner, Party Perfect (3 years)', '- Planned weddings and corporate events', '- Managed vendor contracts and budgets in Excel', 'Education: Diploma in Hospitality', 'Skills: organization, negotiation, Excel (basic)']},\n  { n: 'Arjun Mehta', lines: ['Data Analyst, StreamCo Media (3 years)', '- SQL (window functions, joins) on BigQuery for viewer analytics', '- Python pandas and matplotlib for ad-hoc analysis', '- Tableau dashboards tracking engagement KPIs', '- Built k-means segmentation and a regression model for subscriber growth', '- Presented insights monthly to content and marketing teams', 'Education: B.Sc. Statistics and Computer Science, University of Alberta', 'Skills: SQL, Python, pandas, Tableau, statistics, ML basics, GCP, ChatGPT for automation']},\n  { n: 'Hannah Schmidt', lines: ['Research Assistant, Psychology Lab (1 year)', '- Ran statistical tests in SPSS and R', '- Cleaned survey data in Excel', '- Wrote research summaries', 'Education: B.A. Psychology, University of Calgary', 'Skills: SPSS, R (basic), Excel, statistics, academic writing']},\n  { n: 'Jamal Wright', lines: ['Warehouse Associate, QuickShip (3 years)', '- Loaded and unloaded trucks', '- Operated forklift', 'Education: High school diploma', 'Skills: forklift certification, physical stamina, punctuality']},\n  { n: 'Mei Chen', lines: ['Financial Analyst, Maple Insurance (2 years)', '- Advanced Excel models and VBA macros', '- Some SQL to pull claims data', '- Built a Power BI dashboard for claims trends', 'Education: B.Comm. Finance, Queens University', 'Skills: Excel, VBA, SQL (intermediate), Power BI, financial modeling']},\n  { n: 'Lucas Silva', lines: ['Graphic Designer, Freelance (3 years)', '- Designed logos and social media posts', '- Used Canva and Photoshop', 'Education: Diploma in Graphic Design', 'Skills: Photoshop, Illustrator, Canva, creativity']},\n  { n: 'Grace Kim', lines: ['Analytics Engineer, ShopLocal (3 years)', '- Expert SQL and dbt on Snowflake; owns core revenue data models', '- Python pandas and scikit-learn for demand forecasting (MAPE 8%)', '- Power BI and Tableau dashboards for 5 departments', '- Strong statistics background: regression, hypothesis testing, time series', '- Turns complex results into clear one-page summaries for executives', 'Education: B.Sc. Applied Mathematics, University of British Columbia', 'Skills: SQL, Python, pandas, ML, statistics, Power BI, Tableau, Azure, workflow automation']},\n];\n\nfunction esc(s) { return s.replace(/\\\\/g, '\\\\\\\\').replace(/\\(/g, '\\\\(').replace(/\\)/g, '\\\\)'); }\n\nfunction makePdf(title, lines) {\n  let content = 'BT /F1 16 Tf 50 750 Td (' + esc(title) + ') Tj ET\\n';\n  let y = 720;\n  for (const l of lines) {\n    content += 'BT /F1 10 Tf 50 ' + y + ' Td (' + esc(l) + ') Tj ET\\n';\n    y -= 18;\n  }\n  const objs = [\n    '<< /Type /Catalog /Pages 2 0 R >>',\n    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',\n    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',\n    '<< /Length ' + content.length + ' >>\\nstream\\n' + content + 'endstream',\n    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',\n  ];\n  let pdf = '%PDF-1.4\\n';\n  const offsets = [];\n  objs.forEach((o, i) => { offsets.push(pdf.length); pdf += (i + 1) + ' 0 obj\\n' + o + '\\nendobj\\n'; });\n  const xref = pdf.length;\n  pdf += 'xref\\n0 ' + (objs.length + 1) + '\\n0000000000 65535 f \\n';\n  for (const off of offsets) pdf += String(off).padStart(10, '0') + ' 00000 n \\n';\n  pdf += 'trailer\\n<< /Size ' + (objs.length + 1) + ' /Root 1 0 R >>\\nstartxref\\n' + xref + '\\n%%EOF';\n  return Buffer.from(pdf, 'latin1').toString('base64');\n}\n\nconst base = DateTime.now().setZone('America/Vancouver');\nreturn people.map((p, i) => {\n  const num = String(i + 1).padStart(2, '0');\n  return { json: {\n    candidateName: p.n,\n    candidateEmail: 'nandini99goyal+cand' + num + '@gmail.com',\n    fileName: 'TEST' + num + ' - ' + p.n + ' - Resume.pdf',\n    timestamp: base.plus({ seconds: i * 2 }).toFormat('M/d/yyyy HH:mm:ss'),\n    pdfBase64: makePdf(p.n + ' - Resume', ['Email: nandini99goyal+cand' + num + '@gmail.com', ''].concat(p.lines)),\n  } };\n});"
+      },
+      "id": "053e0a7d-cb55-4012-95b3-dfecb12794a1",
+      "name": "Build Test Resumes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "pdfBase64",
+        "options": {
+          "fileName": "={{ $json.fileName }}",
+          "mimeType": "application/pdf"
+        }
+      },
+      "id": "976d116b-e930-4896-a571-a692bf848820",
+      "name": "Make PDF Files",
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Build Test Resumes').item.json.fileName }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "id": "2b66668e-0e22-43f8-b47a-7f05dc716c26",
+      "name": "Upload Resumes to Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        672,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "35Q4evqiJiBffpo2",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1cQpwOqJeTB9Li_EQtxZHIJbOxqpWGqeB56Ac9v2pWcw",
+          "cachedResultName": "Candidate Pipeline ATS"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "479412746",
+          "cachedResultName": "Candidates"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $('Build Test Resumes').item.json.timestamp }}",
+            "Candidate Name": "={{ $('Build Test Resumes').item.json.candidateName }}",
+            "Candidate Email": "={{ $('Build Test Resumes').item.json.candidateEmail }}",
+            "Upload Resume ": "=https://drive.google.com/open?id={{ $json.id }}"
+          },
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Candidate Name",
+              "displayName": "Candidate Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Candidate Email",
+              "displayName": "Candidate Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Upload Resume ",
+              "displayName": "Upload Resume ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6d813e1b-f8db-4548-8972-419e7a57f835",
+      "name": "Add Candidate Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nVLPfrsDc9h0nLKA",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Build Test Resumes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Test Resumes": {
+      "main": [
+        [
+          {
+            "node": "Make PDF Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Make PDF Files": {
+      "main": [
+        [
+          {
+            "node": "Upload Resumes to Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Resumes to Drive": {
+      "main": [
+        [
+          {
+            "node": "Add Candidate Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "America/Vancouver"
+  },
+  "versionId": "6f9c882a-306a-4c39-81a8-0dcc4f9a33e5",
+  "meta": {
+    "instanceId": "23f80257c5b13da5a3a447280df09a6289c28f895dfd41662615360cac03377a"
+  },
+  "nodeGroups": [],
+  "id": "k9L12KfdqMW5nduc",
+  "tags": []
+}
