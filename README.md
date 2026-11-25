@@ -1,4 +1,4 @@
-# Candidate Pipeline Assistant
+# AtsTracker: AI Recruiting Pipeline
 
 An AI-assisted recruiting workflow built in **n8n**. It screens every new application against the job description, routes each candidate automatically, sends the right email, follows up, and sends a weekly recruiting report. A Google Sheet works as a lightweight ATS (applicant tracking system).
 
@@ -47,7 +47,6 @@ Tested with **15 test candidates** with made-up names and resumes, ranging from 
 
 - Scores ranged from **3 to 96**, with an average of **49**.
 - Every candidate was scored, logged with strengths and gaps, moved to the right stage and emailed. No manual steps.
-- <!-- Add your measured numbers: e.g. "AI top 5 matched my manual top 5 on X of 5" and "screening time cut from X min to under 1 min per resume" -->
 
 ## Workflows
 
@@ -83,22 +82,28 @@ A second tab, `Weekly Report`, stores one row per weekly report.
 ## Repo structure
 
 ```
-candidate-pipeline-assistant/
-├── workflows/        # 4 n8n workflow exports (JSON)
-├── prompts/          # AI scoring prompt
-├── templates/        # email templates
-├── sample-data/      # test candidates (made-up data only)
-├── screenshots/      # sheet, emails, weekly report
+AtsTracker/
+├── workflows/   # 4 n8n workflow exports (JSON)
+├── ss/          # screenshots: sheet, emails, weekly report
 └── README.md
 ```
 
 ## Screenshots
 
-<!-- Add these files to /screenshots -->
-![ATS sheet after screening](screenshots/ats-sheet.png)
-![Assessment invite email](screenshots/email-assessment.png)
-![Rejection email](screenshots/email-rejection.png)
-![Weekly recruiting report](screenshots/weekly-report.png)
+**ATS sheet after AI screening and routing**
+![ATS sheet](ss/Screenshot%202026-11-25%20151103.png)
+
+**Assessment invite (score 70+)**
+![Assessment email](ss/Screenshot%202026-11-25%20151204.png)
+
+**Application received (Review, score 40 to 69)**
+![Received email](ss/Screenshot%202026-11-25%20151233.png)
+
+**Rejection (score below 40)**
+![Rejection email](ss/Screenshot%202026-11-25%20151258.png)
+
+**Weekly recruiting report**
+![Weekly report](ss/Screenshot%202026-11-25%20151054.png)
 
 ## Notes
 
