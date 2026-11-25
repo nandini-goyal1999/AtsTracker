@@ -1,0 +1,650 @@
+{
+  "name": "01 Intake and Screening",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1cQpwOqJeTB9Li_EQtxZHIJbOxqpWGqeB56Ac9v2pWcw",
+          "cachedResultName": "Candidate Pipeline ATS"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "479412746",
+          "cachedResultName": "Candidates"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "id": "3f44bd78-7b7a-4155-97fc-0a2fc3e85ed8",
+      "name": "New Candidate Row",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "7mydnz1vAKziM3bL",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json['Upload Resume '].match(/[-\\w]{25,}/)[0] }}"
+        },
+        "options": {}
+      },
+      "id": "4826051f-dbbf-477d-82a7-7fef0e7e675b",
+      "name": "Download Resume",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "35Q4evqiJiBffpo2",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "id": "6c3321d0-2abb-4b2d-b210-8cf84aae810f",
+      "name": "Extract Resume Text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-6.1-terra"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a recruiter screening resumes. Score the resume against the job description. Return only JSON in exactly this shape: {\"score\": <integer 0-100>, \"strengths\": [3 short items], \"gaps\": [2 short items], \"recommendation\": \"Advance\" | \"Hold\" | \"Reject\"}. No other text."
+            },
+            {
+              "content": "=Job description:\nData Science Analyst. Responsibilities: clean, analyze and visualize data to answer business questions; write SQL queries and Python scripts; build dashboards in Power BI or Tableau; build and evaluate simple machine learning models; present findings clearly to non-technical stakeholders. Requirements: bachelor's degree in a quantitative field; strong SQL and Python (pandas); experience with Power BI or Tableau; understanding of statistics and machine learning basics; strong communication and attention to detail. Assets: cloud tools, automation, AI tools.\n\nResume:\n{{ $json.text }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          }
+        }
+      },
+      "id": "f78040a7-4abe-483d-9c09-0a981be33cf7",
+      "name": "Score Resume",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        0
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "Gateway credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "Timestamp",
+              "type": "string",
+              "value": "={{ $('New Candidate Row').item.json.Timestamp }}"
+            },
+            {
+              "id": "a2",
+              "name": "Score",
+              "type": "number",
+              "value": "={{ $json.output[0].content[0].text.score }}"
+            },
+            {
+              "id": "a3",
+              "name": "Strengths",
+              "type": "string",
+              "value": "={{ ($json.output[0].content[0].text.strengths || []).join('; ') }}"
+            },
+            {
+              "id": "a4",
+              "name": "Gaps",
+              "type": "string",
+              "value": "={{ ($json.output[0].content[0].text.gaps || []).join('; ') }}"
+            },
+            {
+              "id": "a5",
+              "name": "Recommendation",
+              "type": "string",
+              "value": "={{ $json.output[0].content[0].text.recommendation }}"
+            },
+            {
+              "id": "a6",
+              "name": "Stage",
+              "type": "string",
+              "value": "={{ Number($json.output[0].content[0].text.score) >= 70 ? 'Assessment' : (Number($json.output[0].content[0].text.score) >= 40 ? 'Review' : 'Rejected') }}"
+            },
+            {
+              "id": "a8",
+              "name": "Notes",
+              "type": "string",
+              "value": "={{ ($('New Candidate Row').item.json.Notes ? $('New Candidate Row').item.json.Notes + '\\n' : '') + 'Auto-routed to ' + (Number($json.output[0].content[0].text.score) >= 70 ? 'Assessment' : (Number($json.output[0].content[0].text.score) >= 40 ? 'Review' : 'Rejected')) + ' on ' + $now.toFormat('yyyy-MM-dd') }}"
+            },
+            {
+              "id": "a7",
+              "name": "Last Contacted",
+              "type": "string",
+              "value": "={{ $now.toFormat('yyyy-MM-dd') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "320e8210-c0ae-4802-8257-e080b806ddf2",
+      "name": "Prepare Screening Result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1024,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1cQpwOqJeTB9Li_EQtxZHIJbOxqpWGqeB56Ac9v2pWcw",
+          "cachedResultName": "Candidate Pipeline ATS"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Candidates"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Timestamp"
+          ],
+          "value": {
+            "Timestamp": "={{ $json.Timestamp }}",
+            "Score ": "={{ $json.Score }}",
+            "Strengths ": "={{ $json.Strengths }}",
+            "Gaps": "={{ $json.Gaps }}",
+            "Recommendation ": "={{ $json.Recommendation }}",
+            "Stage": "={{ $json.Stage }}",
+            "Last Contacted": "={{ $json['Last Contacted'] }}",
+            "Notes": "={{ $json.Notes }}"
+          },
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score ",
+              "displayName": "Score ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Strengths ",
+              "displayName": "Strengths ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Gaps",
+              "displayName": "Gaps",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommendation ",
+              "displayName": "Recommendation ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stage",
+              "displayName": "Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Contacted",
+              "displayName": "Last Contacted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b9923cf1-cdd3-41b0-ba5a-bee5fcc15a62",
+      "name": "Update Candidate Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nVLPfrsDc9h0nLKA",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ Number($('Prepare Screening Result').item.json.Score) }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "gte"
+                    },
+                    "rightValue": 70
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Assessment (70+)"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ Number($('Prepare Screening Result').item.json.Score) }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "gte"
+                    },
+                    "rightValue": 40
+                  },
+                  {
+                    "leftValue": "={{ Number($('Prepare Screening Result').item.json.Score) }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    },
+                    "rightValue": 70
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Review (40-69)"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ Number($('Prepare Screening Result').item.json.Score) }}",
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    },
+                    "rightValue": 40
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Rejected (<40)"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "3a242907-a2f1-471d-bf7e-83c9335c40bd",
+      "name": "Route by Score",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        752,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('New Candidate Row').item.json['Candidate Email'] }}",
+        "subject": "Next step: Data Science Analyst assessment",
+        "emailType": "text",
+        "message": "=Hi {{ $('New Candidate Row').item.json['Candidate Name'] }}, thanks for applying. Your profile is a strong match, so we'd like you to complete a short SQL and Python assessment within 3 days: [assessment link].",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "32f5c92d-dbdb-449b-bc4d-d540edfe496a",
+      "name": "Send Assessment Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        976,
+        0
+      ],
+      "webhookId": "9e471703-70eb-411f-8587-aa4e0ee263f0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('New Candidate Row').item.json['Candidate Email'] }}",
+        "subject": "Application received: Data Science Analyst",
+        "emailType": "text",
+        "message": "=Hi {{ $('New Candidate Row').item.json['Candidate Name'] }}, thanks for applying for the Data Science Analyst role. We've received your application and will be in touch within 5 business days.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c3b28e5d-fb15-4268-ad0c-7f85ef4a30b7",
+      "name": "Send Confirmation Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1472,
+        0
+      ],
+      "webhookId": "95581884-1054-4909-886f-e96a6160bedf",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "tusharshandilya214@gmail.com",
+        "subject": "=Candidate needs review: {{ $('New Candidate Row').item.json['Candidate Name'] }} ({{ $('Prepare Screening Result').item.json.Score }})",
+        "emailType": "text",
+        "message": "=A candidate scored in the review range (40-69).\n\nName: {{ $('New Candidate Row').item.json['Candidate Name'] }}\nEmail: {{ $('New Candidate Row').item.json['Candidate Email'] }}\nScore: {{ $('Prepare Screening Result').item.json.Score }}\nRecommendation: {{ $('Prepare Screening Result').item.json.Recommendation }}\n\nStrengths: {{ $('Prepare Screening Result').item.json.Strengths }}\nGaps: {{ $('Prepare Screening Result').item.json.Gaps }}\n\nResume: {{ $('New Candidate Row').item.json['Upload Resume '] }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "76b51b1e-5acf-459f-bc2f-5c2b30c4234f",
+      "name": "Notify Reviewer",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        976,
+        384
+      ],
+      "webhookId": "0ab1a849-19ce-454d-a905-157a379768c9",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('New Candidate Row').item.json['Candidate Email'] }}",
+        "subject": "Your application: Data Science Analyst",
+        "emailType": "text",
+        "message": "=Hi {{ $('New Candidate Row').item.json['Candidate Name'] }}, thank you for applying. After reviewing your application, we've decided to move forward with candidates whose experience more closely matches this role. We wish you the best in your search.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "723d1155-ff43-4626-bd30-11415fb2c02a",
+      "name": "Send Rejection Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        976,
+        576
+      ],
+      "webhookId": "c6fd79b8-7499-4f1d-a8a0-7cf6be04028c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "New Candidate Row": {
+      "main": [
+        [
+          {
+            "node": "Download Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Resume": {
+      "main": [
+        [
+          {
+            "node": "Extract Resume Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Resume Text": {
+      "main": [
+        [
+          {
+            "node": "Score Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Resume": {
+      "main": [
+        [
+          {
+            "node": "Prepare Screening Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Screening Result": {
+      "main": [
+        [
+          {
+            "node": "Update Candidate Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Candidate Row": {
+      "main": [
+        [
+          {
+            "node": "Route by Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Score": {
+      "main": [
+        [
+          {
+            "node": "Send Assessment Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Confirmation Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Reviewer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Rejection Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "c61a0048-8441-4cd5-beff-cc0c527f4feb",
+  "meta": {
+    "instanceId": "23f80257c5b13da5a3a447280df09a6289c28f895dfd41662615360cac03377a"
+  },
+  "nodeGroups": [
+    {
+      "id": "d5fb6c94-f4e4-4918-a114-4728aff5fb91",
+      "name": "Score and record candidate",
+      "nodeIds": [
+        "4826051f-dbbf-477d-82a7-7fef0e7e675b",
+        "6c3321d0-2abb-4b2d-b210-8cf84aae810f",
+        "f78040a7-4abe-483d-9c09-0a981be33cf7",
+        "320e8210-c0ae-4802-8257-e080b806ddf2",
+        "b9923cf1-cdd3-41b0-ba5a-bee5fcc15a62"
+      ],
+      "description": "Reads the uploaded resume, scores it against the role, and writes score, stage and notes back to the row"
+    },
+    {
+      "id": "fa2a1f4a-d24a-43db-bbca-1e7ad7419515",
+      "name": "Email next step",
+      "nodeIds": [
+        "3a242907-a2f1-471d-bf7e-83c9335c40bd",
+        "32f5c92d-dbdb-449b-bc4d-d540edfe496a",
+        "c3b28e5d-fb15-4268-ad0c-7f85ef4a30b7",
+        "76b51b1e-5acf-459f-bc2f-5c2b30c4234f",
+        "723d1155-ff43-4626-bd30-11415fb2c02a"
+      ],
+      "description": "70+ gets the assessment, 40-69 gets a confirmation plus a reviewer alert, under 40 gets a rejection"
+    }
+  ],
+  "id": "03v8Nw09tTAtQOdY",
+  "tags": []
+}

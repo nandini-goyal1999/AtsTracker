@@ -1,0 +1,69 @@
+{
+  "name": "04 Weekly Report - Error Alert",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "a5569b45-52d5-497a-87dc-bc2892be373b",
+      "name": "On Workflow Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "nandini99goyal@gmail.com",
+        "subject": "=Workflow failed: {{ $json.workflow.name }}",
+        "emailType": "text",
+        "message": "=The workflow \"{{ $json.workflow.name }}\" failed.\n\nFailed node: {{ $json.execution.lastNodeExecuted || 'unknown' }}\nError: {{ $json.execution.error ? $json.execution.error.message : 'unknown' }}\nExecution: {{ $json.execution.url || $json.execution.id || 'n/a' }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "d3515ae0-ab58-4a73-b3be-43846fbf5835",
+      "name": "Email Failure Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "webhookId": "c04b14e5-7d92-4d07-ad68-0cc1fc7c5b6d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "On Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Email Failure Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "America/Vancouver"
+  },
+  "versionId": "751a2de3-fa0c-44a0-a94c-55e6fac18629",
+  "meta": {
+    "instanceId": "23f80257c5b13da5a3a447280df09a6289c28f895dfd41662615360cac03377a"
+  },
+  "nodeGroups": [],
+  "id": "9vVCSo3LyvAetiDH",
+  "tags": []
+}

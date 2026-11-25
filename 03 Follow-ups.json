@@ -1,0 +1,144 @@
+{
+  "name": "03 Follow-ups",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "cf4bb27d-a7b1-45dd-9636-02991233640a",
+      "name": "Every Day 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1cQpwOqJeTB9Li_EQtxZHIJbOxqpWGqeB56Ac9v2pWcw",
+          "cachedResultName": "Candidate Pipeline ATS"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "479412746",
+          "cachedResultName": "Candidates"
+        },
+        "options": {}
+      },
+      "id": "42efa3d1-c047-4da6-9c7e-c7ebe9d14894",
+      "name": "Read All Candidates",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nVLPfrsDc9h0nLKA",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Find candidates in Assessment/Review whose Last Contacted is 3+ days ago.\nconst zone = 'America/Vancouver';\nconst today = DateTime.now().setZone(zone).startOf('day');\n\nfunction getField(row, name) {\n  const key = Object.keys(row).find(k => k.trim().toLowerCase() === name.toLowerCase());\n  return key === undefined ? undefined : row[key];\n}\n\nfunction parseDate(v) {\n  if (v === undefined || v === null || v === '') return null;\n  if (typeof v === 'number') {\n    // Google Sheets serial date (days since 1899-12-30)\n    return DateTime.fromObject({ year: 1899, month: 12, day: 30 }, { zone }).plus({ days: Math.floor(v) });\n  }\n  const s = String(v).trim();\n  const formats = ['yyyy-MM-dd', 'yyyy-MM-dd HH:mm:ss', 'M/d/yyyy', 'M/d/yyyy H:mm:ss', 'd/M/yyyy'];\n  let d = DateTime.fromISO(s, { zone });\n  for (const f of formats) {\n    if (d.isValid) break;\n    d = DateTime.fromFormat(s, f, { zone });\n  }\n  return d.isValid ? d.startOf('day') : null;\n}\n\nconst waiting = [];\nfor (const item of $input.all()) {\n  const row = item.json;\n  const stage = String(getField(row, 'Stage') || '').trim();\n  if (!['assessment', 'review'].includes(stage.toLowerCase())) continue;\n  const last = parseDate(getField(row, 'Last Contacted'));\n  if (!last) continue;\n  const days = Math.floor(today.diff(last, 'days').days);\n  if (days < 3) continue;\n  const score = getField(row, 'Score');\n  waiting.push({\n    name: String(getField(row, 'Candidate Name') || getField(row, 'Name') || '(no name)').trim(),\n    stage,\n    score: score === undefined || score === '' ? 'n/a' : score,\n    days,\n  });\n}\n\nif (waiting.length === 0) return [];\n\nwaiting.sort((a, b) => b.days - a.days);\nconst lines = waiting.map((c, i) => (i + 1) + '. ' + c.name + ' | Stage: ' + c.stage + ' | Score: ' + c.score + ' | Days since last contact: ' + c.days);\nconst body = waiting.length + ' candidate(s) are waiting on a follow-up (Assessment or Review, last contacted 3+ days ago):\\n\\n' + lines.join('\\n');\n\nreturn [{ json: { count: waiting.length, candidates: waiting, body } }];"
+      },
+      "id": "61da69cb-e535-400c-8b29-ed06e83478fa",
+      "name": "Build Follow-up List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "nandini99goyal@gmail.com",
+        "subject": "Candidates waiting on follow-up",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "c34e2498-c71c-48a3-aca1-c631907fb6d9",
+      "name": "Send Follow-up Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        0
+      ],
+      "executeOnce": true,
+      "webhookId": "79a514f1-4386-4747-810f-e4636f961cd8",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Day 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Read All Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read All Candidates": {
+      "main": [
+        [
+          {
+            "node": "Build Follow-up List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Follow-up List": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "America/Vancouver"
+  },
+  "versionId": "f3746392-1da2-4fb8-b80b-b99b577198dc",
+  "meta": {
+    "instanceId": "23f80257c5b13da5a3a447280df09a6289c28f895dfd41662615360cac03377a"
+  },
+  "nodeGroups": [],
+  "id": "bUz2gXOCzXz70B9R",
+  "tags": []
+}

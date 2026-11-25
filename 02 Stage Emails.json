@@ -1,0 +1,470 @@
+{
+  "name": "02 Stage Emails",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1cQpwOqJeTB9Li_EQtxZHIJbOxqpWGqeB56Ac9v2pWcw",
+          "cachedResultName": "Candidate Pipeline ATS"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "479412746",
+          "cachedResultName": "Candidates"
+        },
+        "event": "rowUpdate",
+        "options": {
+          "columnsToWatch": [
+            "Stage"
+          ]
+        }
+      },
+      "id": "398c7f28-cf31-41e0-a358-0100f199d9c0",
+      "name": "Stage Changed",
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        288
+      ],
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "7mydnz1vAKziM3bL",
+          "name": "Google Sheets Trigger account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ String($json.Stage || \"\").trim() }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "Assessment"
+                  },
+                  {
+                    "leftValue": "={{ String($json.Notes || \"\") }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notContains"
+                    },
+                    "rightValue": "Auto-routed to Assessment"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Assessment"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ String($json.Stage || \"\").trim() }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "Interview"
+                  },
+                  {
+                    "leftValue": "={{ String($json.Notes || \"\") }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notContains"
+                    },
+                    "rightValue": "Auto-routed to Interview"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Interview"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ String($json.Stage || \"\").trim() }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "Rejected"
+                  },
+                  {
+                    "leftValue": "={{ String($json.Notes || \"\") }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notContains"
+                    },
+                    "rightValue": "Auto-routed to Rejected"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Rejected"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ String($json.Stage || \"\").trim() }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "rightValue": "Hired"
+                  },
+                  {
+                    "leftValue": "={{ String($json.Notes || \"\") }}",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notContains"
+                    },
+                    "rightValue": "Auto-routed to Hired"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hired"
+            }
+          ]
+        },
+        "options": {
+          "ignoreCase": true
+        }
+      },
+      "id": "47fb5c72-bd18-406f-a4bd-d4a6b0b455f2",
+      "name": "Route by Stage",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        224,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Stage Changed').item.json['Candidate Email'] }}",
+        "subject": "Next step: Data Science Analyst assessment",
+        "emailType": "text",
+        "message": "=Hi {{ $('Stage Changed').item.json['Candidate Name'] }}, thanks for your interest. Please complete this short SQL and Python assessment within 3 days: [assessment link].",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "04969fcb-4ed5-4a83-9e33-9e35ff9bae70",
+      "name": "Send Assessment Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        0
+      ],
+      "webhookId": "41f3af15-810a-4bf2-a7e7-02ee6462057f",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1cQpwOqJeTB9Li_EQtxZHIJbOxqpWGqeB56Ac9v2pWcw",
+          "cachedResultName": "Candidate Pipeline ATS"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Candidates"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $('Stage Changed').item.json.row_number }}",
+            "Last Contacted": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "Notes": "={{ ($('Stage Changed').item.json.Notes ? $('Stage Changed').item.json.Notes + '\\n' : '') + String($('Stage Changed').item.json.Stage).trim() + ' email sent on ' + $now.toFormat('yyyy-MM-dd') }}"
+          },
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Contacted",
+              "displayName": "Last Contacted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "dfbc97ce-6cec-4e57-8ee4-f07372d2e97f",
+      "name": "Log Contact on Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        288
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nVLPfrsDc9h0nLKA",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Stage Changed').item.json['Candidate Email'] }}",
+        "subject": "Interview invitation: Data Science Analyst",
+        "emailType": "text",
+        "message": "=Hi {{ $('Stage Changed').item.json['Candidate Name'] }}, we'd like to invite you to a 30-minute interview. Please pick a time here: [booking link].",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "971cec56-da24-47ee-acd6-f0a0d1683578",
+      "name": "Send Interview Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        192
+      ],
+      "webhookId": "f48f35a8-edb8-4fb7-8bf2-aaed0cf7ba0d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Stage Changed').item.json['Candidate Email'] }}",
+        "subject": "Your application: Data Science Analyst",
+        "emailType": "text",
+        "message": "=Hi {{ $('Stage Changed').item.json['Candidate Name'] }}, thank you for applying. After careful review, we've decided to move forward with other candidates. We wish you the best.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "08ed50a7-e61b-4a3a-8341-89262ed74c25",
+      "name": "Send Rejection Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        384
+      ],
+      "webhookId": "f1f82264-2cd3-4a40-807f-52c66c8997b3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Stage Changed').item.json['Candidate Email'] }}",
+        "subject": "Welcome aboard!",
+        "emailType": "text",
+        "message": "=Hi {{ $('Stage Changed').item.json['Candidate Name'] }}, congratulations! Here is your onboarding checklist: 1) sign your offer, 2) complete your tax and banking forms, 3) set up your accounts, 4) meet your team on day one.",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "73f550c9-d3d5-4873-a843-f25de09588b6",
+      "name": "Send Welcome Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        576
+      ],
+      "webhookId": "69c4e85c-7415-4bcf-bfb3-7bdedecba44b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Stage Changed": {
+      "main": [
+        [
+          {
+            "node": "Route by Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Stage": {
+      "main": [
+        [
+          {
+            "node": "Send Assessment Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Interview Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Rejection Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Assessment Email": {
+      "main": [
+        [
+          {
+            "node": "Log Contact on Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Interview Email": {
+      "main": [
+        [
+          {
+            "node": "Log Contact on Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Rejection Email": {
+      "main": [
+        [
+          {
+            "node": "Log Contact on Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Log Contact on Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "America/Vancouver"
+  },
+  "versionId": "d05273a0-e49e-4887-a548-32d5d5842bcf",
+  "meta": {
+    "instanceId": "23f80257c5b13da5a3a447280df09a6289c28f895dfd41662615360cac03377a"
+  },
+  "nodeGroups": [],
+  "id": "73uChkq2bbgmCB0I",
+  "tags": []
+}

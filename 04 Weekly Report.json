@@ -1,0 +1,305 @@
+{
+  "name": "04 Weekly Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "372bdc2a-ea6f-4f4d-91fe-6726b1a402ec",
+      "name": "Every Monday 9 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1cQpwOqJeTB9Li_EQtxZHIJbOxqpWGqeB56Ac9v2pWcw",
+          "cachedResultName": "Candidate Pipeline ATS"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "479412746",
+          "cachedResultName": "Candidates"
+        },
+        "options": {}
+      },
+      "id": "fe3823ec-d52d-44b1-965b-d55c037cd52c",
+      "name": "Read All Candidates",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        96
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nVLPfrsDc9h0nLKA",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const zone = 'America/Vancouver';\nconst now = DateTime.now().setZone(zone);\nconst weekAgo = now.minus({ days: 7 });\n\nfunction getField(row, name) {\n  const key = Object.keys(row).find(k => k.trim().toLowerCase() === name.toLowerCase());\n  return key === undefined ? undefined : row[key];\n}\n\nfunction parseDate(v) {\n  if (v === undefined || v === null || v === '') return null;\n  if (typeof v === 'number') {\n    return DateTime.fromObject({ year: 1899, month: 12, day: 30 }, { zone }).plus({ days: v });\n  }\n  const s = String(v).trim();\n  const formats = ['M/d/yyyy H:mm:ss', 'M/d/yyyy', 'yyyy-MM-dd HH:mm:ss', 'yyyy-MM-dd', 'd/M/yyyy H:mm:ss', 'd/M/yyyy'];\n  let d = DateTime.fromISO(s, { zone });\n  for (const f of formats) {\n    if (d.isValid) break;\n    d = DateTime.fromFormat(s, f, { zone });\n  }\n  return d.isValid ? d : null;\n}\n\nconst rows = $input.all().map(i => i.json).filter(r => Object.keys(r).length > 0);\nconst stageCounts = {};\nlet scoreSum = 0;\nlet scoreCount = 0;\nlet addedLast7 = 0;\n\nfor (const row of rows) {\n  const stage = String(getField(row, 'Stage') || '').trim() || 'Unscreened';\n  stageCounts[stage] = (stageCounts[stage] || 0) + 1;\n  const scoreRaw = getField(row, 'Score');\n  const score = Number(scoreRaw);\n  if (scoreRaw !== undefined && scoreRaw !== '' && !isNaN(score)) {\n    scoreSum += score;\n    scoreCount++;\n  }\n  const ts = parseDate(getField(row, 'Timestamp'));\n  if (ts && ts >= weekAgo && ts <= now) addedLast7++;\n}\n\nconst ci = (name) => {\n  const key = Object.keys(stageCounts).find(k => k.toLowerCase() === name.toLowerCase());\n  return key ? stageCounts[key] : 0;\n};\nconst known = ['assessment', 'review', 'rejected', 'unscreened'];\nconst other = Object.entries(stageCounts).filter(([k]) => !known.includes(k.toLowerCase())).reduce((a, [, v]) => a + v, 0);\nconst averageScore = scoreCount ? Math.round((scoreSum / scoreCount) * 10) / 10 : 0;\nconst breakdown = Object.entries(stageCounts).sort((a, b) => b[1] - a[1]).map(([k, v]) => k + ': ' + v).join(', ') || 'none';\n\nreturn [{ json: {\n  date: now.toFormat('yyyy-MM-dd'),\n  totalApplications: rows.length,\n  addedLast7Days: addedLast7,\n  averageScore,\n  scoredCandidates: scoreCount,\n  assessment: ci('Assessment'),\n  review: ci('Review'),\n  rejected: ci('Rejected'),\n  unscreened: ci('Unscreened'),\n  otherStages: other,\n  stageBreakdown: breakdown,\n} }];"
+      },
+      "id": "3137a599-b10f-405c-b320-fccf1aa5486c",
+      "name": "Compute Weekly Stats",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-6.1-terra"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You write concise weekly recruiting summaries for management. Write exactly 4 sentences of plain text, no bullet points, no headings, no markdown. Cover pipeline volume, new applications this week, stage distribution, and candidate quality based on the average score."
+            },
+            {
+              "content": "=Weekly recruiting stats as of {{ $json.date }}:\n- Total applications: {{ $json.totalApplications }}\n- Added in the last 7 days: {{ $json.addedLast7Days }}\n- Average score (0-100): {{ $json.averageScore }} across {{ $json.scoredCandidates }} scored candidates\n- Candidates per stage: {{ $json.stageBreakdown }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "188d9c31-65b0-494b-a6a2-e76180450f56",
+      "name": "Write Management Summary",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        96
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": null,
+          "name": "Gateway credits",
+          "__aiGatewayManaged": true
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "r1",
+              "name": "Date",
+              "type": "string",
+              "value": "={{ $('Compute Weekly Stats').item.json.date }}"
+            },
+            {
+              "id": "r2",
+              "name": "Total Applications",
+              "type": "number",
+              "value": "={{ $('Compute Weekly Stats').item.json.totalApplications }}"
+            },
+            {
+              "id": "r3",
+              "name": "Added Last 7 Days",
+              "type": "number",
+              "value": "={{ $('Compute Weekly Stats').item.json.addedLast7Days }}"
+            },
+            {
+              "id": "r4",
+              "name": "Average Score",
+              "type": "number",
+              "value": "={{ $('Compute Weekly Stats').item.json.averageScore }}"
+            },
+            {
+              "id": "r5",
+              "name": "Candidates per Stage",
+              "type": "string",
+              "value": "={{ $('Compute Weekly Stats').item.json.stageBreakdown }}"
+            },
+            {
+              "id": "r10",
+              "name": "Summary",
+              "type": "string",
+              "value": "={{ String($json.output[0].content[0].text).trim() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1c568352-add7-44e9-a3e3-79d98c8eea24",
+      "name": "Prepare Report",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1024,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "nandini99goyal@gmail.com",
+        "subject": "Weekly Recruiting Report",
+        "emailType": "text",
+        "message": "=Weekly Recruiting Report - {{ $json.Date }}\n\n{{ $json.Summary }}\n\nKey numbers:\n- Total applications: {{ $json['Total Applications'] }}\n- Added in the last 7 days: {{ $json['Added Last 7 Days'] }}\n- Average score: {{ $json['Average Score'] }}\n- Candidates per stage: {{ $json['Candidates per Stage'] }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "1f060e0f-cd67-4ed0-bffa-e72ab69797b4",
+      "name": "Email Weekly Report",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        0
+      ],
+      "executeOnce": true,
+      "webhookId": "4b314cc8-95ca-4562-baab-14a0ece14cb3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "ycAoMaxJbGguSz2u",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "1cQpwOqJeTB9Li_EQtxZHIJbOxqpWGqeB56Ac9v2pWcw",
+          "cachedResultName": "Candidate Pipeline ATS"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": 696122496,
+          "cachedResultName": "Weekly Report"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "11548ab8-6a52-4b28-805f-ad171c2d89d1",
+      "name": "Log to Weekly Report Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1248,
+        192
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "nVLPfrsDc9h0nLKA",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every Monday 9 AM": {
+      "main": [
+        [
+          {
+            "node": "Read All Candidates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read All Candidates": {
+      "main": [
+        [
+          {
+            "node": "Compute Weekly Stats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Weekly Stats": {
+      "main": [
+        [
+          {
+            "node": "Write Management Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Management Summary": {
+      "main": [
+        [
+          {
+            "node": "Prepare Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Report": {
+      "main": [
+        [
+          {
+            "node": "Email Weekly Report",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Weekly Report Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timezone": "America/Vancouver",
+    "errorWorkflow": "9vVCSo3LyvAetiDH"
+  },
+  "versionId": "6a5afedf-2344-40fa-b9e6-d7a25fdc7d29",
+  "meta": {
+    "instanceId": "23f80257c5b13da5a3a447280df09a6289c28f895dfd41662615360cac03377a"
+  },
+  "nodeGroups": [],
+  "id": "zjSUoCz6ioE58LJT",
+  "tags": []
+}
